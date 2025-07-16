@@ -54,6 +54,75 @@ async function updateTodo(id: string, data: { title?: string; description?: stri
   return response.json();
 }
 
+function setupDragAndDrop() {
+  // Setup drag events for TODO items
+  document.addEventListener('dragstart', (e) => {
+    const todoItem = (e.target as HTMLElement).closest('.todo-item');
+    if (todoItem) {
+      const todoId = todoItem.getAttribute('data-todo-id');
+      const statusId = todoItem.getAttribute('data-status-id');
+      
+      if (todoId && statusId) {
+        e.dataTransfer!.setData('text/plain', JSON.stringify({
+          todoId,
+          statusId
+        }));
+        e.dataTransfer!.effectAllowed = 'move';
+        
+        // Add visual feedback
+        (todoItem as HTMLElement).style.opacity = '0.5';
+        (todoItem as HTMLElement).style.transform = 'rotate(5deg)';
+      }
+    }
+  });
+  
+  document.addEventListener('dragend', (e) => {
+    const todoItem = (e.target as HTMLElement).closest('.todo-item');
+    if (todoItem) {
+      // Reset visual feedback
+      (todoItem as HTMLElement).style.opacity = '1';
+      (todoItem as HTMLElement).style.transform = 'rotate(0deg)';
+    }
+  });
+  
+  // Setup drop events for columns
+  document.addEventListener('dragover', (e) => {
+    const dropZone = (e.target as HTMLElement).closest('.drop-zone');
+    if (dropZone) {
+      e.preventDefault();
+      e.dataTransfer!.dropEffect = 'move';
+      dropZone.classList.add('border-notion-blue', 'bg-blue-50', 'dark:bg-blue-900/20');
+    }
+  });
+  
+  document.addEventListener('dragleave', (e) => {
+    const dropZone = (e.target as HTMLElement).closest('.drop-zone');
+    if (dropZone && !dropZone.contains(e.relatedTarget as Node)) {
+      dropZone.classList.remove('border-notion-blue', 'bg-blue-50', 'dark:bg-blue-900/20');
+    }
+  });
+  
+  document.addEventListener('drop', (e) => {
+    const dropZone = (e.target as HTMLElement).closest('.drop-zone');
+    if (dropZone) {
+      e.preventDefault();
+      dropZone.classList.remove('border-notion-blue', 'bg-blue-50', 'dark:bg-blue-900/20');
+      
+      const toStatusId = dropZone.getAttribute('data-status-id');
+      const data = JSON.parse(e.dataTransfer!.getData('text/plain'));
+      const { todoId, statusId: fromStatusId } = data;
+      
+      // Only handle drop if status is different
+      if (fromStatusId !== toStatusId) {
+        // Dispatch custom event to handle the drop
+        window.dispatchEvent(new CustomEvent('todoDropped', {
+          detail: { todoId, toStatusId }
+        }));
+      }
+    }
+  });
+}
+
 function setupEventListeners() {
   const todoForm = document.getElementById('todo-form') as HTMLFormElement;
   if (todoForm) {
@@ -146,6 +215,29 @@ function setupEventListeners() {
       }
     });
   }
+
+  // Setup drag and drop functionality
+  setupDragAndDrop();
+  
+  // Setup drag and drop event handler
+  window.addEventListener('todoDropped', async (event: Event) => {
+    const customEvent = event as CustomEvent;
+    const { todoId, toStatusId } = customEvent.detail;
+    
+    try {
+      // Update the todo's status
+      await updateTodo(todoId, { statusId: toStatusId });
+      showToast('TODOのステータスが更新されました', 'success');
+      
+      // Reload page to reflect changes
+      setTimeout(() => {
+        window.location.reload();
+      }, 1000);
+    } catch (error) {
+      console.error('Failed to update todo status:', error);
+      showToast('TODOのステータス更新に失敗しました', 'error');
+    }
+  });
 }
 
 async function showEditModal(todoId: string) {

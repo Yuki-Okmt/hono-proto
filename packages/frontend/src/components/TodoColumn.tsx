@@ -21,7 +21,10 @@ const TodoColumn: FC<TodoColumnProps> = ({ status, todos }) => {
   };
 
   return (
-    <div className="bg-notion-bg-secondary border border-notion-border rounded-notion p-4 dark:bg-notion-bg-secondary-dark dark:border-notion-border-dark">
+    <div 
+      className="bg-notion-bg-secondary border border-notion-border rounded-notion p-4 dark:bg-notion-bg-secondary-dark dark:border-notion-border-dark drop-zone transition-all duration-200"
+      data-status-id={status.id}
+    >
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center space-x-2">
           <h3 className="text-lg font-medium text-notion-text dark:text-notion-text-dark">

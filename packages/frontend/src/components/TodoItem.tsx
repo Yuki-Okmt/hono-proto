@@ -20,7 +20,12 @@ const TodoItem: FC<TodoItemProps> = ({ todo }) => {
   };
 
   return (
-    <div className="group bg-notion-bg border border-notion-border rounded-notion p-4 hover:shadow-notion-hover hover:border-gray-300 transition-all duration-200 animate-fade-in dark:bg-notion-bg-dark dark:border-notion-border-dark dark:hover:shadow-notion-hover-dark dark:hover:border-gray-600">
+    <div 
+      className="group bg-notion-bg border border-notion-border rounded-notion p-4 hover:shadow-notion-hover hover:border-gray-300 transition-all duration-200 animate-fade-in dark:bg-notion-bg-dark dark:border-notion-border-dark dark:hover:shadow-notion-hover-dark dark:hover:border-gray-600 cursor-move todo-item"
+      draggable
+      data-todo-id={todo.id}
+      data-status-id={todo.statusId}
+    >
       <div className="flex items-start justify-between">
         <div className="flex-1 min-w-0">
           <h4 className="font-medium text-notion-text dark:text-notion-text-dark mb-1 truncate">
