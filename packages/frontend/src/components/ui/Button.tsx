@@ -1,13 +1,14 @@
 import { FC } from 'hono/jsx';
 
 interface ButtonProps {
-  children: React.ReactNode;
+  children: any;
   onClick?: () => void;
   variant?: 'primary' | 'secondary' | 'ghost' | 'danger';
   size?: 'sm' | 'md' | 'lg';
   disabled?: boolean;
   type?: 'button' | 'submit' | 'reset';
   className?: string;
+  'data-todo-id'?: string;
 }
 
 const Button: FC<ButtonProps> = ({
@@ -18,6 +19,7 @@ const Button: FC<ButtonProps> = ({
   disabled = false,
   type = 'button',
   className = '',
+  'data-todo-id': dataTodoId,
 }) => {
   const baseClasses = [
     'inline-flex items-center justify-center font-medium transition-all duration-200',
@@ -72,6 +74,7 @@ const Button: FC<ButtonProps> = ({
       onClick={onClick}
       disabled={disabled}
       className={classes}
+      data-todo-id={dataTodoId}
     >
       {children}
     </button>

@@ -125,26 +125,9 @@ function setupEventListeners() {
     const editBtn = target.closest('.edit-btn') as HTMLElement;
     if (editBtn) {
       const todoId = editBtn.dataset.todoId;
+      console.log('Edit button clicked, todoId:', todoId);
       if (todoId) {
-        const newTitle = prompt('新しいタイトルを入力してください:');
-        if (newTitle) {
-          try {
-            editBtn.style.opacity = '0.5';
-            editBtn.style.pointerEvents = 'none';
-            
-            await updateTodo(todoId, { title: newTitle });
-            showToast('TODOが更新されました', 'success');
-            
-            setTimeout(() => {
-              window.location.reload();
-            }, 1000);
-          } catch (error) {
-            console.error('Failed to update todo:', error);
-            showToast('TODOの更新に失敗しました', 'error');
-            editBtn.style.opacity = '1';
-            editBtn.style.pointerEvents = 'auto';
-          }
-        }
+        showEditModal(todoId);
       }
     }
   });
@@ -162,6 +145,105 @@ function setupEventListeners() {
         localStorage.setItem('theme', 'dark');
       }
     });
+  }
+}
+
+async function showEditModal(todoId: string) {
+  console.log('showEditModal called with todoId:', todoId);
+  try {
+    // Fetch the current todo data
+    const response = await fetch(`${API_BASE}/api/todos/${todoId}`);
+    console.log('API response status:', response.status);
+    const todo = await response.json();
+    console.log('Todo data:', todo);
+    
+    // Create modal backdrop
+    const backdrop = document.createElement('div');
+    backdrop.className = 'fixed inset-0 bg-black bg-opacity-50 z-40 flex items-center justify-center';
+    
+    // Create modal content
+    const modal = document.createElement('div');
+    modal.className = 'bg-white dark:bg-notion-bg-dark rounded-lg p-6 max-w-md w-full mx-4 shadow-xl';
+    modal.innerHTML = `
+      <h3 class="text-lg font-semibold mb-4 text-notion-text dark:text-notion-text-dark">TODOを編集</h3>
+      <form id="edit-form">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-notion-text-secondary dark:text-notion-text-secondary-dark mb-1">タイトル</label>
+          <input type="text" name="title" value="${todo.title}" class="w-full px-3 py-2 border border-notion-border dark:border-notion-border-dark rounded-md focus:outline-none focus:ring-2 focus:ring-notion-blue bg-white dark:bg-notion-bg-dark text-notion-text dark:text-notion-text-dark" />
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-notion-text-secondary dark:text-notion-text-secondary-dark mb-1">説明</label>
+          <textarea name="description" rows="3" class="w-full px-3 py-2 border border-notion-border dark:border-notion-border-dark rounded-md focus:outline-none focus:ring-2 focus:ring-notion-blue bg-white dark:bg-notion-bg-dark text-notion-text dark:text-notion-text-dark">${todo.description || ''}</textarea>
+        </div>
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-notion-text-secondary dark:text-notion-text-secondary-dark mb-1">ステータス</label>
+          <select name="statusId" class="w-full px-3 py-2 border border-notion-border dark:border-notion-border-dark rounded-md focus:outline-none focus:ring-2 focus:ring-notion-blue bg-white dark:bg-notion-bg-dark text-notion-text dark:text-notion-text-dark">
+            ${await getStatusOptions(todo.statusId)}
+          </select>
+        </div>
+        <div class="flex justify-end space-x-2">
+          <button type="button" id="cancel-btn" class="px-4 py-2 text-sm border border-notion-border dark:border-notion-border-dark rounded-md hover:bg-gray-50 dark:hover:bg-gray-800 text-notion-text dark:text-notion-text-dark">キャンセル</button>
+          <button type="submit" class="px-4 py-2 text-sm bg-notion-blue text-white rounded-md hover:bg-blue-600">更新</button>
+        </div>
+      </form>
+    `;
+    
+    backdrop.appendChild(modal);
+    document.body.appendChild(backdrop);
+    
+    // Handle form submission
+    const editForm = modal.querySelector('#edit-form') as HTMLFormElement;
+    editForm.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const formData = new FormData(editForm);
+      const data = {
+        title: formData.get('title') as string,
+        description: formData.get('description') as string || undefined,
+        statusId: formData.get('statusId') as string,
+      };
+      
+      try {
+        await updateTodo(todoId, data);
+        showToast('TODOが更新されました', 'success');
+        document.body.removeChild(backdrop);
+        
+        setTimeout(() => {
+          window.location.reload();
+        }, 1000);
+      } catch (error) {
+        console.error('Failed to update todo:', error);
+        showToast('TODOの更新に失敗しました', 'error');
+      }
+    });
+    
+    // Handle cancel button
+    const cancelBtn = modal.querySelector('#cancel-btn') as HTMLButtonElement;
+    cancelBtn.addEventListener('click', () => {
+      document.body.removeChild(backdrop);
+    });
+    
+    // Close on backdrop click
+    backdrop.addEventListener('click', (e) => {
+      if (e.target === backdrop) {
+        document.body.removeChild(backdrop);
+      }
+    });
+    
+  } catch (error) {
+    console.error('Failed to fetch todo:', error);
+    showToast('TODOの取得に失敗しました', 'error');
+  }
+}
+
+async function getStatusOptions(selectedStatusId: string): Promise<string> {
+  try {
+    const statuses = await fetchStatuses();
+    return statuses.map(status => 
+      `<option value="${status.id}" ${status.id === selectedStatusId ? 'selected' : ''}>${status.name}</option>`
+    ).join('');
+  } catch (error) {
+    console.error('Failed to fetch statuses:', error);
+    return '';
   }
 }
 
